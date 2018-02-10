@@ -27,4 +27,4 @@ RUN \
   rm NOTICE && \
 #  chmod o+t /tmp && \
 #  apk del ruby-dev && \
-  apk del build-base
+  apk del build-base 

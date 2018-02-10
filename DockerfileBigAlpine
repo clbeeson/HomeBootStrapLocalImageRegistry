@@ -1,0 +1,30 @@
+FROM alpine:3.7
+
+RUN \
+  apk update && \
+  apk upgrade && \
+  apk add util-linux pciutils usbutils coreutils binutils findutils grep build-base curl ruby ruby-dev ruby-rdoc ruby-irb libxml2-dev sqlite-dev libxslt-dev postgresql-dev mariadb-client zlib-dev wget nfs-utils cifs-utils samba-client python python-dev py-pip openldap-clients git sshpass jq bash && \
+  gem install bosh_cli --no-ri --no-rdoc && \
+  gem install cf-uaac && \
+  gem install bosh_cli --no-ri --no-rdoc && \
+#  curl -L "https://cli.run.pivotal.io/stable?release=linux64-binary&source=github" | tar -zx && \
+  wget -O cfcli.tgz "https://cli.run.pivotal.io/stable?release=linux64-binary&version=6.31.0&source=github-rel" && \
+  tar -xzf cfcli.tgz && \
+  chmod 755 cf && \
+  mv cf /usr/bin && \
+  rm cfcli.tgz && \
+  wget -O om "https://github.com/pivotal-cf/om/releases/download/0.29.0/om-linux" && \
+  chmod 755 om && \
+  mv ./om /usr/bin && \
+  wget -O boshv2 "https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-2.0.48-linux-amd64" && \
+  chmod 755 boshv2 && \
+  mv boshv2 /usr/bin && \
+  wget https://github.com/pivotalservices/cfops/releases/download/v3.1.7/cfops_linux64 && \
+  mv cfops_linux64 cfops && \
+  chmod 755 ./cfops && \
+  mv cfops /usr/bin && \
+  rm LICENSE && \
+  rm NOTICE && \
+#  chmod o+t /tmp && \
+#  apk del ruby-dev && \
+  apk del build-base

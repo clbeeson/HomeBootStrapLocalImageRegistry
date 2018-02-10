@@ -1,0 +1,271 @@
+---
+resource_types:
+- name: email
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/email-resource
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: nexus
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/nexusresource
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+
+resources:
+- name: ci
+  type: git
+  source:
+    branch: master
+    uri: ((GIT_CI_URI))
+    private_key: ((GIT_PROJECT_PRIVATE_KEY))
+- name: gitimage
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/pcfimage
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: clair-image
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/clair
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: NEXUS-scan-archive
+  type: nexus
+  source:
+    base_uri: ((NEXUS_URI))
+    repository: thirdparty
+    asset_collection: ((NEXUS_asset_collection))
+    type: ((NEXUS_type))
+    fileglob: "((IMAGENAME))-.*.tgz"
+    versionglob: "((IMAGENAME))-(.*).tgz"
+    user: ((P_NEXUS_USER))
+    password: ((P_NEXUS_PASSWORD))
+    debug: "yes"
+- name: NEXUS-rootfs-archive
+  type: nexus
+  source:
+    base_uri: ((NEXUS_URI))
+    repository: thirdparty
+    asset_collection: ((NEXUS_asset_collection))
+    type: ((NEXUS_type))
+    fileglob: "((IMAGENAME))-rootfs-.*.tgz"
+    versionglob: "((IMAGENAME))-rootfs-(.*).tgz"
+    user: ((P_NEXUS_USER))
+    password: ((P_NEXUS_PASSWORD))
+    debug: "yes"
+- name: scanned-image
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/((IMAGENAME))
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: send-email
+  type: email
+  source:
+    smtp:
+      host: "omasmtpgwy.1dc.com"
+      port: "25"
+      skip_ssl_validation: true
+      anonymous: true
+    from: ((email-from))
+    to: ((email-to))
+
+jobs:
+- name: Inspect-Image
+  plan:
+  - get: ci
+  - get: gitimage
+  - get: clairImage
+    resource: clair-image
+  - task: Run Docker to build and save
+    privileged: true
+    params:
+      CI: ci
+      DOCKERFILE: ((DOCKERFILE))
+      IMAGENAME: ((IMAGENAME))
+      IMAGEDIR: toScan
+      CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ((REGISTRY))/dcind
+          insecure_registries: [ "((REGISTRY))" ]
+          username: ((LOCALDOCKERUSER))
+          password: ((LOCALDOCKERPASSWORD))
+      inputs:
+        - name: ci
+      outputs:
+        - name: toScan
+        - name: torun
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            source /docker-lib.sh
+            start_docker
+            docker build -t ${IMAGENAME} - < ${DOCKERFILE}
+            docker image save -o ${IMAGEDIR}/image ${IMAGENAME}
+            docker inspect ${IMAGENAME} > ${IMAGEDIR}/docker_inspect.json
+            cat ${IMAGEDIR}/docker_inspect.json | jq .[].Id | sed -E 's/\"(.*)\"/\1/g' > ${IMAGEDIR}/image-id
+            cat ${IMAGEDIR}/docker_inspect.json | jq .[].RepoDigests | grep ${IMAGENAME} | sed -E 's/.*@(.*)\"/\1/g' > ${IMAGEDIR}/digest
+            docker run --cidfile=/tmp/container.cid -v /opt/resource/print-metadata:/tmp/print-metadata --entrypoint /tmp/print-metadata ${IMAGENAME}  > ${IMAGEDIR}/metadata.json
+            echo "latest" > ${IMAGEDIR}/tag
+            mkdir -p torun/rootfs
+            # Build out torun as a rootfs file system
+            cp ${IMAGEDIR}/metadata.json torun/metadata.json
+            docker export $(cat /tmp/container.cid) | tar --exclude="dev/*" -xf - -C torun/rootfs
+            docker export $(cat /tmp/container.cid) > ${IMAGEDIR}/rootfs.tar
+            ls -alR ${IMAGEDIR}
+  - task: runScan
+    image: clairImage
+    params:
+      CI: ci
+      DOCKERFILE: ((DOCKERFILE))
+      IMAGENAME: ((IMAGENAME))
+      IMAGEDIR: toScan
+      CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
+      RESULTS: results
+    config:
+      platform: linux
+      inputs:
+        - name: ci
+        - name: toScan
+      outputs:
+        - name: results
+      run:
+        path: mksh
+        args:
+          - -exc
+          - |
+            echo Starting clair
+            /clair -config ${CLAIRCONFIG} &
+            echo "image ${IMAGEDIR}/${IMAGENAME}"
+            imagelayer=$(echo ${IMAGENAME} | tr -dc 'a-zA-Z0-9')
+            sleep 10
+            # tell clair to delete any image scan with same name
+            curl --noproxy '*' -X DELETE http://127.0.0.1:6060/v1/layers/${imagelayer}
+            echo "SLEEPING"
+            ./${CI}/scanimage/ci/scripts/analyze_local_image.sh -tar ./${IMAGEDIR}/image ${IMAGENAME}
+            echo Ended Scan
+            sleep 10
+            echo ALL FEATURES
+            curl --noproxy '*' -s -X GET http://127.0.0.1:6060/v1/layers/$imagelayer?vulnerabilities > ${RESULTS}/${IMAGENAME}.json
+            echo "All Features"
+            cat ${RESULTS}/${IMAGENAME}.json | jq '.[]'
+            echo Ready to exit
+            pkill clair
+  - task: checkHighVulnerabilities
+    image: clairImage
+    file: ci/scanimage/ci/tasks/CheckScanResults.yml
+    params:
+      CI: ci
+      IMAGENAME: ((IMAGENAME))
+      IMAGEDIR: toScan
+      FAILON: High
+      CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
+    on_failure:
+      do:
+        - task: PrepSendFailedEmail
+          image: clairImage
+          file: ci/scanimage/ci/tasks/PrepSendFailedEmail.yml
+          params:
+            CI: ci
+            IMAGENAME: ((IMAGENAME))
+            IMAGEDIR: toScan
+            CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
+            FAILON: High
+        - put: send-email
+          params:
+            subject: ./email-text/email-subject.txt
+            body: ./email-text/email-body.txt
+  - task: checkMediumVulnerabilities
+    image: clairImage
+    file: ci/scanimage/ci/tasks/CheckScanResults.yml
+    params:
+      CI: ci
+      IMAGENAME: ((IMAGENAME))
+      IMAGEDIR: toScan
+      FAILON: Medium
+      CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
+    on_failure:
+      do:
+        - task: PrepSendFailedEmail
+          image: clairImage
+          file: ci/scanimage/ci/tasks/PrepSendFailedEmail.yml
+          params:
+            CI: ci
+            IMAGENAME: ((IMAGENAME))
+            IMAGEDIR: toScan
+            CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
+            FAILON: Medium
+        - put: send-email
+          params:
+            subject: ./email-text/email-subject.txt
+            body: ./email-text/email-body.txt
+  - task: packageForNexus
+    image: clairImage
+    params:
+      CI: ci
+      DOCKERFILE: ((DOCKERFILE))
+      IMAGENAME: ((IMAGENAME))
+      IMAGEDIR: toScan
+      TORUNDIR: torun
+      CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
+      IMAGEDIRFORARCHIVE: archive
+      IMAGEDIRFORROOTFS: rootfs
+      SCANRESULTS: results
+    config:
+      platform: linux
+      inputs:
+        - name: toScan
+        - name: results
+        - name: torun
+        - name: ci
+      outputs:
+        - name: archive
+        - name: rootfs
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            mkdir -p ${IMAGEDIRFORARCHIVE}/workdir/Dockerfile
+            cp ${DOCKERFILE} ${IMAGEDIRFORARCHIVE}/workdir/Dockerfile
+            mkdir -p ${IMAGEDIRFORARCHIVE}/workdir/Results
+            cp ${SCANRESULTS}/*.json ${IMAGEDIRFORARCHIVE}/workdir/Results
+            mkdir -p ${IMAGEDIRFORARCHIVE}/workdir/Prepped
+            cp -R ${IMAGEDIR}/* ${IMAGEDIRFORARCHIVE}/workdir/Prepped
+            echo "PASSED" > ${IMAGEDIRFORARCHIVE}/workdir/imagescanresults
+            numMedium=`cat ${IMAGEDIRFORARCHIVE}/workdir/Results/${IMAGENAME}.json | jq '.[] | { Feature: .Features[] }' | grep "\"Severity\": \"High\"" | wc -l`
+            if [ $numMedium -gt 0 ]
+            then
+              echo "FAILED" > ${IMAGEDIRFORARCHIVE}/workdir/imagescanresults
+            fi
+            numHigh=`cat ${IMAGEDIRFORARCHIVE}/workdir/Results/${IMAGENAME}.json | jq '.[] | { Feature: .Features[] }' | grep "\"Severity\": \"High\"" | wc -l`
+            if [ $numHigh -gt 0 ]
+            then
+              echo "FAILED" > ${IMAGEDIRFORARCHIVE}/workdir/imagescanresults
+            fi
+            linkedvers=`date "+%m%d%H%M%Y%S"`
+            tar czf "${IMAGEDIRFORARCHIVE}/${IMAGENAME}-${linkedvers}.tgz" -C ${IMAGEDIRFORARCHIVE}/workdir .
+            tar czf "${IMAGEDIRFORROOTFS}/${IMAGENAME}-rootfs-${linkedvers}.tgz" -C ${TORUNDIR} .
+  - put: NEXUS-scan-archive
+    params:
+      putdirectory: "archive"
+  - put: NEXUS-rootfs-archive
+    params:
+      putdirectory: "rootfs"
+  - put: scanned-image
+    params:
+      load: toScan

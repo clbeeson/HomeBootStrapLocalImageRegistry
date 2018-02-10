@@ -1,0 +1,72 @@
+groups: []
+resources:
+- name: ci
+  type: git
+  source:
+    branch: master
+    uri: ((GIT_CI_URI))
+    private_key: ((GIT_PROJECT_PRIVATE_KEY))
+- name: new-docker-image-nexusresourse
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/nexusresourse
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: new-docker-image-email-resource
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/email-resource
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: new-docker-image-pcfimage
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/pcfimage
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: new-docker-image-clair
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/clair
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: new-docker-image-dcind
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/dcind
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+jobs:
+- name: Inspect-Image
+  plan:
+  - get: ci
+  - put: nexusresourse
+    resource: new-docker-image-nexusresourse
+    params:
+      build: ci
+      dockerfile: ci/scanimage/DockerfileNewNexusResource
+  - put: email-resource
+    resource: new-docker-image-email-resource
+    params:
+      build: ci
+      dockerfile: ci/scanimage/email-resource
+  - put: pcfimage
+    resource: new-docker-image-pcfimage
+    params:
+      build: ci
+      dockerfile: ci/scanimage/DockerfileBigAlpine
+  - put: clair
+    resource: new-docker-image-clair
+    params:
+      build: ci
+      dockerfile: ci/scanimage/DockerfileClair
+  - put: dcind
+    resource: new-docker-image-dcind
+    params:
+      build: ci
+      dockerfile: ci/scanimage/DockerfileDcind

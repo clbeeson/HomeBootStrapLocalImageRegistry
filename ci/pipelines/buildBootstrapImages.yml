@@ -12,6 +12,27 @@ resources:
     insecure_registries: [ "((REGISTRY))" ]
     username: ((LOCALDOCKERUSER))
     password: ((LOCALDOCKERPASSWORD))
+- name: new-docker-image-clair
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/clair
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: new-docker-image-dcind
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/dcind
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: new-docker-image-email-resource
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/email-resource
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
 jobs:
 - name: Inspect-Image
   plan:
@@ -20,4 +41,19 @@ jobs:
     resource: new-docker-image-pcfimage
     params:
       build: ci
-      dockerfile: ci/scanimage/DockerfileBigAlpine
+      dockerfile: ci/DockerfileBigAlpine
+  - put: clair
+    resource: new-docker-image-clair
+    params:
+      build: ci
+      dockerfile: ci/DockerfileClair
+  - put: dcind
+    resource: new-docker-image-dcind
+    params:
+      build: ci
+      dockerfile: ci/DockerfileDcind
+  - put: email-resource
+    resource: new-docker-image-email-resource
+    params:
+      build: ci
+      dockerfile: ci/DockerfileEmailResource

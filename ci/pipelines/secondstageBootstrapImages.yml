@@ -182,12 +182,14 @@ jobs:
             #tar czf "${IMAGEDIRFORROOTFS}/${IMAGENAME}-rootfs-${linkedvers}.tgz" -C ${TORUNDIR} .
   - put: NEXUS-scan-archive
     params:
-      files: "archive/workdir/*"
+      putdirectory: "archive/workdir"
+      files: "*"
       tar: "TRUE"
       tarprefix: "((IMAGENAME))-scan"
   - put: NEXUS-rootfs-archive
     params:
-      files: "torun/*"
+      putdirectory: "torun"
+      files: "*"
       tar: "TRUE"
       tarprefix: "((IMAGENAME))-rootfs"
   - put: scanned-image

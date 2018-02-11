@@ -7,6 +7,7 @@ parse_source_config() {
 parse_param_config() {
   TAR=$(jq -r '.params.tar // "false"' $payload)
   TARPREFIX=$(jq -r '.params.tarprefix // "file"' $payload)
+  PUTDIR=$(jq -r '.params.putdirectory // "file"' $payload)
 }
 
 get_listing() {

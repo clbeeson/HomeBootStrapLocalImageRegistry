@@ -11,7 +11,7 @@
 #   }
 # }
 
-set -e
+#set -e
 
 exec 3>&1 # make stdout available as fd 3 for the result
 exec 1>&2 # redirect all output to stderr for logging
@@ -25,7 +25,6 @@ parse_source_config
 parse_param_config
 
 source=$1
-
 if [ -z "$source" ]; then
   echo "usage: $0 <path/to/source>"
   exit 1
@@ -33,13 +32,13 @@ fi
 
 files=$(jq -r '.params.files // "*"' < $payload)
 
-if [ "$TAR" == "false"]; then
+if [[ "$TAR" == "false" ]]; then
   cd $source
   lftp -c "open $URL; mput $files"
 else
   TEMPDEST=$(mktemp /tmp/transfer-out.XXXXXX)
   TGZFILE=$TARPREFIX-`date "+%m%d%H%M%Y%S"`.tgz
-  tar -czf $TEMPDEST/$TGZFILE -C $source $files
+  tar -czf $TEMPDEST/$TGZFILE -C $PUTDIR $files
   cd $TEMPDEST
   lftp -c "open $URL; mput $TGZFILE"
   REGEXP="$TARPREFIX-(.*).tgz"

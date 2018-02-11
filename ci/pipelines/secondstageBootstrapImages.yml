@@ -103,7 +103,7 @@ jobs:
       DOCKERFILE: ((DOCKERFILE))
       IMAGENAME: ((IMAGENAME))
       IMAGEDIR: toScan
-      CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
+      CLAIRCONFIG: ci/ci/tasks/((CLAIRCONFIG))
       RESULTS: results
     config:
       platform: linux

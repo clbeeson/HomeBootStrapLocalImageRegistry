@@ -29,9 +29,9 @@ DESTINATION_DIR=$1
 if [ -z "$VERSION" ] || [ "$VERSION" == "latest" ]; then
   get_listing
   parse_versions
-  VERSION=$(echo $FOUND_VERSIONS | sort -rh | head -1)
+  VERSION=$(echo $FOUND_VERSIONS | sort -r | head -1)
 fi
-TEMPDEST=$(mktemp /tmp/transfer-in.XXXXXX)
+TEMPDEST=$(mktemp -d /tmp/transfer-in.XXXXXX)
 cd $TEMPDEST
 FILE=$(echo "$REGEXP" | sed -e "s/(.*)/$VERSION/")
 lftpget -c "$URL/$FILE"

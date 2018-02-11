@@ -36,7 +36,7 @@ if [[ "$TAR" == "false" ]]; then
   cd $source
   lftp -c "open $URL; mput $files"
 else
-  TEMPDEST=$(mktemp /tmp/transfer-out.XXXXXX)
+  TEMPDEST=$(mktemp -d /tmp/transfer-out.XXXXXX)
   TGZFILE=$TARPREFIX-`date "+%m%d%H%M%Y%S"`.tgz
   tar -czf $TEMPDEST/$TGZFILE -C $PUTDIR $files
   cd $TEMPDEST

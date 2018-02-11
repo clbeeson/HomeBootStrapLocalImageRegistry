@@ -47,7 +47,7 @@ fi
 # The script must emit the resulting version of the resource.
 LISTING=$(ls -1 $files)
 parse_versions
-VERSION=$(echo $FOUND_VERSIONS | sort -rh | head -1)
+VERSION=$(echo $FOUND_VERSIONS | sort -r | head -1)
 cat >&3 <<EOF
 {
   "version": { "ref": "$VERSION" },

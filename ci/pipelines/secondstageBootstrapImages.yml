@@ -1,16 +1,9 @@
 ---
 resource_types:
-- name: email
+- name: lftp
   type: docker-image
   source:
-    repository: ((REGISTRY))/email-resource
-    insecure_registries: [ "((REGISTRY))" ]
-    username: ((LOCALDOCKERUSER))
-    password: ((LOCALDOCKERPASSWORD))
-- name: nexus
-  type: docker-image
-  source:
-    repository: ((REGISTRY))/nexusresource
+    repository: ((REGISTRY))/lftp
     insecure_registries: [ "((REGISTRY))" ]
     username: ((LOCALDOCKERUSER))
     password: ((LOCALDOCKERPASSWORD))
@@ -37,29 +30,15 @@ resources:
     username: ((LOCALDOCKERUSER))
     password: ((LOCALDOCKERPASSWORD))
 - name: NEXUS-scan-archive
-  type: nexus
+  type: lftp
   source:
-    base_uri: ((NEXUS_URI))
-    repository: thirdparty
-    asset_collection: ((NEXUS_asset_collection))
-    type: ((NEXUS_type))
-    fileglob: "((IMAGENAME))-.*.tgz"
-    versionglob: "((IMAGENAME))-(.*).tgz"
-    user: ((P_NEXUS_USER))
-    password: ((P_NEXUS_PASSWORD))
-    debug: "yes"
+    url: ((FTPSCANRESULTS))
+    regexp: ((IMAGENAME))-scan-(.*).tgz
 - name: NEXUS-rootfs-archive
-  type: nexus
+  type: lftp
   source:
-    base_uri: ((NEXUS_URI))
-    repository: thirdparty
-    asset_collection: ((NEXUS_asset_collection))
-    type: ((NEXUS_type))
-    fileglob: "((IMAGENAME))-rootfs-.*.tgz"
-    versionglob: "((IMAGENAME))-rootfs-(.*).tgz"
-    user: ((P_NEXUS_USER))
-    password: ((P_NEXUS_PASSWORD))
-    debug: "yes"
+    url: ((FTPIMAGES))
+    regexp: ((IMAGENAME))-rootfs-(.*).tgz
 - name: scanned-image
   type: docker-image
   source:
@@ -67,16 +46,6 @@ resources:
     insecure_registries: [ "((REGISTRY))" ]
     username: ((LOCALDOCKERUSER))
     password: ((LOCALDOCKERPASSWORD))
-- name: send-email
-  type: email
-  source:
-    smtp:
-      host: "omasmtpgwy.1dc.com"
-      port: "25"
-      skip_ssl_validation: true
-      anonymous: true
-    from: ((email-from))
-    to: ((email-to))
 
 jobs:
 - name: Inspect-Image
@@ -156,7 +125,7 @@ jobs:
             # tell clair to delete any image scan with same name
             curl --noproxy '*' -X DELETE http://127.0.0.1:6060/v1/layers/${imagelayer}
             echo "SLEEPING"
-            ./${CI}/scanimage/ci/scripts/analyze_local_image.sh -tar ./${IMAGEDIR}/image ${IMAGENAME}
+            ./${CI}/ci/scripts/analyze_local_image.sh -tar ./${IMAGEDIR}/image ${IMAGENAME}
             echo Ended Scan
             sleep 10
             echo ALL FEATURES
@@ -165,55 +134,7 @@ jobs:
             cat ${RESULTS}/${IMAGENAME}.json | jq '.[]'
             echo Ready to exit
             pkill clair
-  - task: checkHighVulnerabilities
-    image: clairImage
-    file: ci/scanimage/ci/tasks/CheckScanResults.yml
-    params:
-      CI: ci
-      IMAGENAME: ((IMAGENAME))
-      IMAGEDIR: toScan
-      FAILON: High
-      CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
-    on_failure:
-      do:
-        - task: PrepSendFailedEmail
-          image: clairImage
-          file: ci/scanimage/ci/tasks/PrepSendFailedEmail.yml
-          params:
-            CI: ci
-            IMAGENAME: ((IMAGENAME))
-            IMAGEDIR: toScan
-            CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
-            FAILON: High
-        - put: send-email
-          params:
-            subject: ./email-text/email-subject.txt
-            body: ./email-text/email-body.txt
-  - task: checkMediumVulnerabilities
-    image: clairImage
-    file: ci/scanimage/ci/tasks/CheckScanResults.yml
-    params:
-      CI: ci
-      IMAGENAME: ((IMAGENAME))
-      IMAGEDIR: toScan
-      FAILON: Medium
-      CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
-    on_failure:
-      do:
-        - task: PrepSendFailedEmail
-          image: clairImage
-          file: ci/scanimage/ci/tasks/PrepSendFailedEmail.yml
-          params:
-            CI: ci
-            IMAGENAME: ((IMAGENAME))
-            IMAGEDIR: toScan
-            CLAIRCONFIG: ci/scanimage/ci/tasks/((CLAIRCONFIG))
-            FAILON: Medium
-        - put: send-email
-          params:
-            subject: ./email-text/email-subject.txt
-            body: ./email-text/email-body.txt
-  - task: packageForNexus
+  - task: packageForlftp
     image: clairImage
     params:
       CI: ci
@@ -257,15 +178,19 @@ jobs:
             then
               echo "FAILED" > ${IMAGEDIRFORARCHIVE}/workdir/imagescanresults
             fi
-            linkedvers=`date "+%m%d%H%M%Y%S"`
-            tar czf "${IMAGEDIRFORARCHIVE}/${IMAGENAME}-${linkedvers}.tgz" -C ${IMAGEDIRFORARCHIVE}/workdir .
-            tar czf "${IMAGEDIRFORROOTFS}/${IMAGENAME}-rootfs-${linkedvers}.tgz" -C ${TORUNDIR} .
+            #linkedvers=`date "+%m%d%H%M%Y%S"`
+            #tar czf "${IMAGEDIRFORARCHIVE}/${IMAGENAME}-${linkedvers}.tgz" -C ${IMAGEDIRFORARCHIVE}/workdir .
+            #tar czf "${IMAGEDIRFORROOTFS}/${IMAGENAME}-rootfs-${linkedvers}.tgz" -C ${TORUNDIR} .
   - put: NEXUS-scan-archive
     params:
-      putdirectory: "archive"
+      files: "archive/workdir/*"
+      tar: "TRUE"
+      tarprefix: "((IMAGENAME))-scan"
   - put: NEXUS-rootfs-archive
     params:
-      putdirectory: "rootfs"
+      files: "torun/*"
+      tar: "TRUE"
+      tarprefix: "((IMAGENAME))-rootfs"
   - put: scanned-image
     params:
       load: toScan

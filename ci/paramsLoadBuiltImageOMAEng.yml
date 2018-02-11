@@ -1,0 +1,42 @@
+GITIMAGEURI: ssh://git@escmstash.1dc.com:7999/piv/pcfalpineimage.git
+GIT_CI_URI: ssh://git@escmstash.1dc.com:7999/~f4doz4x/dockerimagesupport.git
+GIT_PROJECT_PRIVATE_KEY: |
+   -----BEGIN RSA PRIVATE KEY-----
+   MIIEowIBAAKCAQEAqte/YP0RK432rIrGSbXSoT7SfT97VCb5HU5CtwpBUA8V7ynp
+   el+dhBtauWjpT+ZsDu7AZCRxRXtnG9wR50s/VGDaE6j6AP3OEdrt1D0TJJBbAgaU
+   RAJVRdwFohl+Dfs+Ys0DfdAVb5eXUZ15M1/R/fghbYHj2L6xT/Q/5h8AUyf/fy8F
+   qSB3j/O+fUwQuNCEpC/o0bNgMJhASdiChO7/iAbk9N8+tudGOGGHeyOs5Q7ZkneM
+   s46X3f5GZA+qT/4onxbMe4RMEbt+VfwruTKVdR8svg/yurJ6BK7GWDJLP1B07GV0
+   kCF6biAensQX3fCPvCczq5unYh61zpyjGTAUvQIDAQABAoIBAFWXlbg/0ZRioY08
+   Ua+oOoiycr5xSZaVmAVIqkAOET7M8A5Mjz7SHJaNJdzyZMG1DbpFf3osj9thwfzB
+   Ou8IUggyJc/nvqk0f0OOzcyhdK/C6vWO2kVgbdx8KQ5Xe0IB9/WEBRXJZJPt/M/U
+   9133ybtVz1mP09lJYIhQNJtUONNvyxCjaDH5fREf7anhf+bpJF0i/XppfDzPfL/E
+   myGAr6UHt8/V9JtSsfSVOe5UphVhtmsv8RJzVbD2LaqV1c+hortKVo9Cmwzh2+ZL
+   yvEtaTz2aMtVV/JyQVZ3o22FIDw4FiFzveSH6LtT9soMkZwcvHbUtkCV7bPgMWvL
+   uJ1dTkECgYEA0sqwkUvc9ZZcaqOnMIj1K6VWzpzTD1m7Y5ZGe3C2HHmsMlPBFDar
+   MZ7QHgvnzJAY38QgNXvLhS2GBJxp80jEtiv1Xhjt1iI2r8yWI2ENmCjKwcDkOOaw
+   KcEe3YQ7L7BZVNpyrpkMeV0BfbRg10NT0OpYJVywCigm+yJCHlPU+OkCgYEAz3uy
+   y7V2qYP5+2ehVnIPH7/O5jzeRJiVhl2TqHDNhB/e8MH5sGyflrvpVxGXAIRN+NUL
+   KfpN8sxSKCtTULkK3b30tb6YsCqEkRjEuQsYAyiPkPoZCOenx2Cy7vp6JHusbeK/
+   XchBi5M6Jn18sCu5OvqnpHbmozdFVBFIMWYsWLUCgYEAzBk1nXm3GJPeJ+MNnxD9
+   UqVkx+lQ8ywPJP38gMlBi5DECnbOHKRSXllHadBdQNTFQOTFywNyrCDIAu7wJ3/t
+   9/XYPqQkpZG7Ib0WImt2nj3hFHmQgQfcypETMak3JZW66U4afLP0QA6twulEWyn1
+   nfNKJeL5ENyP4dnp6zOAowECgYBZ4gWP2Dnir8jQz5EGKP1CTM6t0Tqcztkfz1QT
+   SWLO1Ru4gt/PPQ9ZtmgcjwMydx5sKKbgdY3lG/yPaE18j90UOKFVRo9Q6epqDSfT
+   3el2HNEtBhtoTyrQ5aQ+gQX+3hDRvcQXNZSniY1MdVpZ22cwFLwhNF0v4dbH14DF
+   3bRibQKBgD44P9oeI1KxnBLpaTIQl4M8fdVDxwvimbbvEANSgm6e0zy+mJC1uoVp
+   vtEfgjm2SK0NBpOxFepZCJ9xXEXGDMhQJre+kjYZXUS9d0aMza/TZvD1pGz1hwxA
+   tTuXkeBx3fp6m2MZTVzlIa1w7N2xxjVXESgkbCg3FmLIi/QGOiL8
+   -----END RSA PRIVATE KEY-----
+
+LOCALDOCKERUSER: admin
+LOCALDOCKERPASSWORD: password
+
+REGISTRY: registry-oma-eng.1dc.com
+IMAGENAME: dcind
+
+NEXUS_URI: http://s1qvap952.1dc.com:8081/nexus
+NEXUS_asset_collection: com/fdc/cloudops/instances
+NEXUS_type: oma/engineering/private-image-scan-results
+P_NEXUS_USER: ucomconcourse
+P_NEXUS_PASSWORD: N3xu5d3p10y

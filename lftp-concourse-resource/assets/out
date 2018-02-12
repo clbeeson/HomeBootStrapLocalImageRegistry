@@ -29,7 +29,7 @@ if [ -z "$source" ]; then
   echo "usage: $0 <path/to/source>"
   exit 1
 fi
-
+cd $source
 files=$(jq -r '.params.files // "*"' < $payload)
 
 if [[ "$TAR" == "false" ]]; then
@@ -38,9 +38,9 @@ if [[ "$TAR" == "false" ]]; then
 else
   TEMPDEST=$(mktemp -d /tmp/transfer-out.XXXXXX)
   TGZFILE=$TARPREFIX-`date "+%m%d%H%M%Y%S"`.tgz
-  tar -czf $TEMPDEST/$TGZFILE -C $PUTDIR $files
+  tar -czf $TEMPDEST/$TGZFILE -C $PUTDIR .
   cd $TEMPDEST
-  lftp -c "open $URL; mput $TGZFILE"
+  lftp -c "open $URL; mput $TEMPDEST/$TGZFILE"
   REGEXP="$TARPREFIX-(.*).tgz"
 fi
 

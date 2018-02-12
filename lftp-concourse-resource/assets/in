@@ -26,7 +26,7 @@ parse_param_config
 DESTINATION_DIR=$1
 
 
-if [ -z "$VERSION" ] || [ "$VERSION" == "latest" ]; then
+if [[ -z "$VERSION" ]] || [[ "$VERSION" == "latest" ]]; then
   get_listing
   parse_versions
   VERSION=$(echo $FOUND_VERSIONS | sort -r | head -1)
@@ -34,9 +34,9 @@ fi
 TEMPDEST=$(mktemp -d /tmp/transfer-in.XXXXXX)
 cd $TEMPDEST
 FILE=$(echo "$REGEXP" | sed -e "s/(.*)/$VERSION/")
-lftpget -c "$URL/$FILE"
+lftp -c "open $URL; get $FILE"
 
-if [ "$TAR" == "false"]; then
+if [[ "$TAR" == "false" ]]; then
   cp * $DESTINATION_DIR
 else
   tar -xf * -C $DESTINATION_DIR

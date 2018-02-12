@@ -94,7 +94,6 @@ jobs:
             cp ${IMAGEDIR}/metadata.json torun/metadata.json
             docker export $(cat /tmp/container.cid) | tar --exclude="dev/*" -xf - -C torun/rootfs
             docker export $(cat /tmp/container.cid) > ${IMAGEDIR}/rootfs.tar
-            ls -alR ${IMAGEDIR}
   - task: runScan
     image: clairImage
     params:
@@ -166,6 +165,7 @@ jobs:
             cp ${SCANRESULTS}/*.json ${IMAGEDIRFORARCHIVE}/workdir/Results
             mkdir -p ${IMAGEDIRFORARCHIVE}/workdir/Prepped
             cp -R ${IMAGEDIR}/* ${IMAGEDIRFORARCHIVE}/workdir/Prepped
+            echo "${IMAGENAME}:latest" > ${IMAGEDIRFORARCHIVE}/workdir/imagename
             echo "PASSED" > ${IMAGEDIRFORARCHIVE}/workdir/imagescanresults
             numMedium=`cat ${IMAGEDIRFORARCHIVE}/workdir/Results/${IMAGENAME}.json | jq '.[] | { Feature: .Features[] }' | grep "\"Severity\": \"High\"" | wc -l`
             if [ $numMedium -gt 0 ]
@@ -177,9 +177,6 @@ jobs:
             then
               echo "FAILED" > ${IMAGEDIRFORARCHIVE}/workdir/imagescanresults
             fi
-            #linkedvers=`date "+%m%d%H%M%Y%S"`
-            #tar czf "${IMAGEDIRFORARCHIVE}/${IMAGENAME}-${linkedvers}.tgz" -C ${IMAGEDIRFORARCHIVE}/workdir .
-            #tar czf "${IMAGEDIRFORROOTFS}/${IMAGENAME}-rootfs-${linkedvers}.tgz" -C ${TORUNDIR} .
   - put: NEXUS-scan-archive
     params:
       putdirectory: "archive/workdir"

@@ -1,0 +1,64 @@
+---
+resource_types:
+- name: lftp
+  type: docker-image
+  source:
+    repository: ((REGISTRY))/lftp
+    insecure_registries: [ "((REGISTRY))" ]
+    username: ((LOCALDOCKERUSER))
+    password: ((LOCALDOCKERPASSWORD))
+- name: fly
+  type: docker-image
+  source:
+    repository: troykinsella/concourse-fly-resource
+    tag: latest
+- name: meta
+  type: docker-image
+  source:
+    repository: swce/metadata-resource
+
+resources:
+- name: NEXUS-rootfs-archive
+  type: lftp
+  source:
+    url: ((FTPIMAGES))
+    regexp: pcfimage-rootfs-(.*).tgz
+- name: meta
+  type: meta
+
+- name: fly
+  type: fly
+  source:
+    url: http://192.168.100.4:8080/
+    username: admin
+    password: password
+    team: main
+    insecure: true
+jobs:
+- name: Inspect-Image
+  plan:
+  - get: rootfs
+    resource: NEXUS-rootfs-archive
+    params:
+      tar: true
+  - get: meta
+  - task: makedeleteme
+    image: rootfs
+    params:
+    config:
+      platform: linux
+      inputs:
+        - name: meta
+      outputs:
+        - name: deleteme
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            set -eu
+            buildname=`cat meta/build-pipeline-name`
+            echo "destroy-pipeline -p ${buildname} --non-interactive" >> deleteme/flyconfig
+  - put: fly
+    params:
+      options_file: deleteme/flyconfig
